@@ -7,20 +7,28 @@ correctamente. Tenga en cuenta datos faltantes y duplicados.
 
 """
 import pandas as pd
+import re
+from datetime import datetime
 
 def clean_data():
-    df = pd.read_csv("solicitudes_credito.csv", sep=";")
+    df = pd.read_csv("solicitudes_credito.csv", sep=";", index_col=0)
+    
+    columns_to_lower = ['sexo', 'tipo_de_emprendimiento', 'idea_negocio', 'línea_credito', 'barrio']
+    characters_to_replace = ['_', '-']
+    
+    df.dropna(inplace=True)
+    df.drop_duplicates(inplace=True)
 
-    df = df.drop_duplicates()
-    df.dropna(axis=0,inplace=True)
-    df.drop_duplicates(inplace = True)
+    for column in columns_to_lower:
+        df[column] = df[column].str.lower()
+        for character in characters_to_replace:
+            df[column] = df[column].str.replace(character, ' ')
 
-    for columna in ['sexo', 'tipo_de_emprendimiento', 'idea_negocio', 'línea_credito', 'barrio']: #['sexo', 'tipo_de_emprendimiento', 'idea_negocio', 'barrio', 'línea_credito']:
-        df[columna] = df[columna].apply(lambda x: x.lower()) 
-
-    df["monto_del_credito"] = df["monto_del_credito"].str.replace("[^0-9]", "", regex=True)
-    df["línea_credito"] = df["línea_credito"].str.lower()
-
-    df = df.dropna()
+    df['monto_del_credito'] = df['monto_del_credito'].apply(lambda x: int(re.sub(r'[\$,\.]', '', x)))
+    df['comuna_ciudadano'] = df['comuna_ciudadano'].astype(float)
+    df['fecha_de_beneficio'] = pd.to_datetime(df['fecha_de_beneficio'], format="%Y/%m/%d", errors='coerce')
+    
+    df.dropna(inplace=True)
+    df.drop_duplicates(inplace=True)
 
     return df
