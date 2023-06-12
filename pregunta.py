@@ -11,24 +11,32 @@ import re
 from datetime import datetime
 
 def clean_data():
+
     df = pd.read_csv("solicitudes_credito.csv", sep=";", index_col=0)
     
-    columns_to_lower = ['sexo', 'tipo_de_emprendimiento', 'idea_negocio', 'línea_credito', 'barrio']
-    characters_to_replace = ['_', '-']
-    
-    df.dropna(inplace=True)
+    # Se eliminan NaN y duplicados
+    df.dropna(axis=0, inplace=True)
     df.drop_duplicates(inplace=True)
 
-    for column in columns_to_lower:
-        df[column] = df[column].str.lower()
-        for character in characters_to_replace:
-            df[column] = df[column].str.replace(character, ' ')
+    # Se pasa a minúscula la columna sexo, de esta forma solo quedan dos posibles valores
+    columns = ['sexo', 'tipo_de_emprendimiento', 'idea_negocio', 'línea_credito', 'barrio']
+    df[columns] = df[columns].apply(lambda x: x.str.lower())
 
-    df['monto_del_credito'] = df['monto_del_credito'].apply(lambda x: int(re.sub(r'[\$,\.]', '', x)))
-    df['comuna_ciudadano'] = df['comuna_ciudadano'].astype(float)
-    df['fecha_de_beneficio'] = pd.to_datetime(df['fecha_de_beneficio'], format="%Y/%m/%d", errors='coerce')
+    # Se depuran las columnas idea_negocio, barrio, eliminando los caracteres especiales
+    characters = ['_', '-']
+    df[columns] = df[columns].apply(lambda x: x.replace(characters, ' '))
+
+    # Se eliminan los símbolos y se convierte a entero la columna monto_del_credito
+    df['monto_del_credito'] = df['monto_del_credito'].str.replace(r'\$|,|\.\d+', '', regex=True).astype(int)
     
-    df.dropna(inplace=True)
+    # Se convierte a flotante la columna comuna_ciudadano
+    df['comuna_ciudadano'] = df['comuna_ciudadano'].astype(float)
+
+    # Se convierte la columna fecha_de_beneficio al formato adecuado
+    df['fecha_de_beneficio'] = df['fecha_de_beneficio'].apply(lambda x: datetime.strptime(x, "%Y/%m/%d") if (len(re.findall("^\d+/", x)[0]) - 1) == 4 else datetime.strptime(x, "%d/%m/%Y"))
+
+    # Se eliminan NaN y duplicados nuevamente
+    df.dropna(axis=0, inplace=True)
     df.drop_duplicates(inplace=True)
 
     return df
